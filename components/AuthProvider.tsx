@@ -1,10 +1,11 @@
 'use client';
 
-// Mock auth context for the frontend mockup. Persists a "session" in localStorage
-// so guarded screens render populated in the preview. The real app swaps this for
-// JWT calls to POST /api/auth/login|signup|logout and GET /api/me.
+// Auth context backed by the real JWT API. Persists the token in localStorage
+// and hydrates the current member from GET /api/me on load. Guarded screens
+// read `member`/`ready` to decide whether to render or redirect to /login.
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { MEMBERS, Member } from '@/lib/mockData';
+import { Member } from '@/lib/mockData';
+import { apiFetch, setToken, clearToken, getToken } from '@/lib/apiClient';
 
 interface AuthState {
   member: Member | null;
@@ -14,53 +15,58 @@ interface AuthState {
   logout: () => void;
 }
 
-const STORAGE_KEY = 'chorechart.session';
 const AuthCtx = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  // Default to the demo admin so preview screens are populated on first load.
-  const [member, setMember] = useState<Member | null>(MEMBERS[0]);
+  const [member, setMember] = useState<Member | null>(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) setMember(JSON.parse(raw));
-    } catch {
-      /* ignore */
+    let active = true;
+    async function hydrate() {
+      if (!getToken()) {
+        if (active) setReady(true);
+        return;
+      }
+      try {
+        const { member } = await apiFetch<{ member: Member }>('/me');
+        if (active) setMember(member);
+      } catch {
+        clearToken();
+        if (active) setMember(null);
+      } finally {
+        if (active) setReady(true);
+      }
     }
-    setReady(true);
+    hydrate();
+    return () => {
+      active = false;
+    };
   }, []);
 
-  function persist(m: Member | null) {
-    setMember(m);
-    try {
-      if (m) window.localStorage.setItem(STORAGE_KEY, JSON.stringify(m));
-      else window.localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      /* ignore */
-    }
+  async function login(email: string, password: string) {
+    const { token, member } = await apiFetch<{ token: string; member: Member }>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+    setToken(token);
+    setMember(member);
   }
 
-  async function login(email: string) {
-    const found = MEMBERS.find((m) => m.email.toLowerCase() === email.toLowerCase());
-    persist(found ?? MEMBERS[0]);
-  }
-
-  async function signup(name: string, email: string) {
-    const newMember: Member = {
-      id: MEMBERS.length + 1,
-      name: name || 'New Member',
-      email,
-      avatarColor: '#0ea5e9',
-      points: 0,
-      role: 'USER',
-    };
-    persist(newMember);
+  async function signup(name: string, email: string, password: string) {
+    const { token, member } = await apiFetch<{ token: string; member: Member }>('/auth/signup', {
+      method: 'POST',
+      body: JSON.stringify({ name, email, password }),
+    });
+    setToken(token);
+    setMember(member);
   }
 
   function logout() {
-    persist(null);
+    // Fire-and-forget; JWT is stateless so client-side token discard is enough.
+    apiFetch('/auth/logout', { method: 'POST' }).catch(() => {});
+    clearToken();
+    setMember(null);
   }
 
   return (

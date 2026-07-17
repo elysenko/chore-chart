@@ -1,11 +1,22 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import AppShell from '@/components/AppShell';
-import { MEMBERS, initials } from '@/lib/mockData';
+import { apiFetch } from '@/lib/apiClient';
+import { initials, Member } from '@/lib/mockData';
 
 export default function MembersPage() {
+  const [members, setMembers] = useState<Member[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    apiFetch<{ members: Member[] }>('/members')
+      .then((d) => setMembers(d.members))
+      .catch(() => setMembers([]))
+      .finally(() => setLoading(false));
+  }, []);
+
   return (
     <AppShell>
       <div data-testid="members-main">
@@ -15,14 +26,16 @@ export default function MembersPage() {
           <p className="sub">Everyone sharing the chore rotation.</p>
         </div>
 
-        {MEMBERS.length === 0 ? (
+        {loading ? (
+          <div className="skeleton" style={{ height: 200 }} />
+        ) : members.length === 0 ? (
           <div className="card empty">
             <div className="big">👪</div>
             <div>No members yet.</div>
           </div>
         ) : (
           <div className="grid">
-            {MEMBERS.map((m) => (
+            {members.map((m) => (
               <Link key={m.id} href={`/members/${m.id}`} className="card member-card">
                 <span className="avatar" style={{ width: 64, height: 64, background: m.avatarColor, fontSize: 22 }}>
                   {initials(m.name)}

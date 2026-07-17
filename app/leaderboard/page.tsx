@@ -1,12 +1,22 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import AppShell from '@/components/AppShell';
-import { MEMBERS, initials } from '@/lib/mockData';
+import { apiFetch } from '@/lib/apiClient';
+import { initials, Member } from '@/lib/mockData';
 
 export default function LeaderboardPage() {
-  const ranked = [...MEMBERS].sort((a, b) => b.points - a.points);
+  const [ranked, setRanked] = useState<Member[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    apiFetch<{ leaderboard: Member[] }>('/leaderboard')
+      .then((d) => setRanked(d.leaderboard))
+      .catch(() => setRanked([]))
+      .finally(() => setLoading(false));
+  }, []);
+
   const top = ranked[0]?.points || 1;
   const rankClass = ['gold', 'silver', 'bronze'];
 
@@ -19,7 +29,9 @@ export default function LeaderboardPage() {
           <p className="sub">Points earned by completing chores. Keep it up!</p>
         </div>
 
-        {ranked.length === 0 ? (
+        {loading ? (
+          <div className="skeleton" style={{ height: 200 }} />
+        ) : ranked.length === 0 ? (
           <div className="card empty">
             <div className="big">🏆</div>
             <div>No scores yet.</div>

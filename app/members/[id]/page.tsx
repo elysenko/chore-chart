@@ -1,22 +1,40 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import AppShell from '@/components/AppShell';
-import { MEMBERS, historyForMember, initials, weekLabel, WEEKDAYS } from '@/lib/mockData';
+import { apiFetch, HistoryDTO } from '@/lib/apiClient';
+import { initials, weekLabel, WEEKDAYS, Member } from '@/lib/mockData';
 
 export default function MemberDetailPage() {
   const params = useParams();
-  const id = Number(Array.isArray(params.id) ? params.id[0] : params.id);
-  const member = MEMBERS.find((m) => m.id === id);
+  const id = Array.isArray(params.id) ? params.id[0] : params.id;
+
+  const [member, setMember] = useState<Member | null>(null);
+  const [history, setHistory] = useState<HistoryDTO[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+
+  useEffect(() => {
+    if (!id) return;
+    apiFetch<{ member: Member; history: HistoryDTO[] }>(`/members/${id}`)
+      .then((d) => {
+        setMember(d.member);
+        setHistory(d.history);
+      })
+      .catch(() => setNotFound(true))
+      .finally(() => setLoading(false));
+  }, [id]);
 
   return (
     <AppShell>
       <div data-testid="member-detail-main">
         <Link href="/members" className="btn ghost sm" style={{ marginBottom: 18 }}>‹ All members</Link>
 
-        {!member ? (
+        {loading ? (
+          <div className="skeleton" style={{ height: 200 }} />
+        ) : !member || notFound ? (
           <div className="card empty">
             <div className="big">🔍</div>
             <div>Member not found.</div>
@@ -40,7 +58,7 @@ export default function MemberDetailPage() {
             </div>
 
             <div className="section-title">Chore history</div>
-            <HistoryList memberId={member.id} />
+            <HistoryList history={history} />
           </>
         )}
       </div>
@@ -48,8 +66,7 @@ export default function MemberDetailPage() {
   );
 }
 
-function HistoryList({ memberId }: { memberId: number }) {
-  const history = historyForMember(memberId, 6);
+function HistoryList({ history }: { history: HistoryDTO[] }) {
   if (history.length === 0) {
     return (
       <div className="card empty">
