@@ -12,11 +12,53 @@ enum Role {
   USER
 }
 
+// Member = User: one auth-bearing entity. A member signs in and completes
+// their own chores. Domain fields (avatarColor, points) live alongside the
+// auth baseline (email, password, role).
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String
-  role      Role     @default(USER)
-  password  String
-  createdAt DateTime @default(now())
+  id          String       @id @default(cuid())
+  email       String       @unique
+  name        String
+  password    String
+  role        Role         @default(USER)
+  avatarColor String       @default("#6366f1")
+  points      Int          @default(0)
+  assignments Assignment[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+model Chore {
+  id             String       @id @default(cuid())
+  name           String
+  pointValue     Int
+  dueDay         Int // 0=Sun .. 6=Sat
+  rotationOffset Int
+  assignments    Assignment[]
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model Assignment {
+  id          String    @id @default(cuid())
+  choreId     String
+  chore       Chore     @relation(fields: [choreId], references: [id], onDelete: Cascade)
+  memberId    String
+  member      User      @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  isoWeek     String
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([choreId, isoWeek])
+  @@index([memberId])
+}
+
+// Runtime override layer for service credentials. resolveConfig() reads env
+// vars first and falls back to this table.
+model SystemSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }

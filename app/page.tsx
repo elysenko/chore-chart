@@ -1,8 +1,15 @@
+import React, { Suspense } from 'react';
+import AppShell from '@/components/AppShell';
+import Dashboard from '@/components/pages/Dashboard';
+
 export default function Home() {
   return (
-    <main data-testid="home-main">
-      <h1 data-testid="home-title">Colossus Next.js scaffold</h1>
-      <p>Replace this page with the real application UI.</p>
-    </main>
+    <AppShell>
+      <div data-testid="home-main">
+        <Suspense fallback={<div className="skeleton" style={{ height: 240 }} />}>
+          <Dashboard />
+        </Suspense>
+      </div>
+    </AppShell>
   );
 }
