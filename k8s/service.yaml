@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: chore-chart
+  namespace: colossus-chore-chart
+  labels:
+    app: chore-chart
+    managed-by: colossus
+spec:
+  type: ClusterIP
+  selector:
+    app: chore-chart
+  ports:
+    - port: 80
+      targetPort: 8080
