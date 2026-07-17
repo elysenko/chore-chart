@@ -1,0 +1,16 @@
+{
+  "_generated": true,
+  "_scaffolded_at": "2026-07-17T23:07:19Z",
+  "_note": "This file is overwritten by the scaffolder agent. Do not edit manually.",
+  "fileBudget": { "maxLines": 400, "hardLimit": 500 },
+  "routes": [
+    { "method": "GET", "path": "/api/health" }
+  ],
+  "components": [
+    { "selector": "Home", "file": "app/page.tsx", "maxLines": 400 }
+  ],
+  "testIds": [
+    { "id": "home-main", "element": "main", "component": "Home" },
+    { "id": "home-title", "element": "h1", "component": "Home" }
+  ]
+}
